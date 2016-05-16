@@ -6,6 +6,8 @@ import (
 )
 
 func main() {
+	go h.run()
+
 	router := NewRouter()
 
 	log.Fatal(http.ListenAndServe(":3000", router))

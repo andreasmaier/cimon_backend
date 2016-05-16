@@ -26,6 +26,8 @@ func NewRouter() *mux.Router {
 			Handler(route.HandlerFunc)
 	}
 
+	router.Path("/ws").Handler(http.HandlerFunc(serveWs))
+
 	return router
 }
 
@@ -35,6 +37,12 @@ var routes = Routes{
 		"POST",
 		"/jobupdates",
 		JobUpdates,
+	},
+	Route{
+		"WSTest",
+		"POST",
+		"/wstest",
+		WSTest,
 	},
 }
 

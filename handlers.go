@@ -15,4 +15,12 @@ func JobUpdates(w http.ResponseWriter, r *http.Request) {
 	}
 
 	fmt.Printf("%s\n", body)
+
+	h.broadcast <- body
+}
+
+func WSTest(w http.ResponseWriter, r *http.Request) {
+	fmt.Println("ws test\n")
+
+	h.broadcast <- []byte("Hey this is a message")
 }
