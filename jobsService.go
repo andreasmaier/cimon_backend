@@ -10,7 +10,7 @@ type JenkinsJob struct {
 	Id int `json:"id"`
 	Server string `json:"server"`
 	Path string `json:"path"`
-	Status string `jsonL:"status"`
+	Status string `json:"status"`
 }
 
 func storeJob(job JenkinsJob) {
@@ -30,6 +30,21 @@ func storeJob(job JenkinsJob) {
 		} else {
 			fmt.Println("Added job to database")
 		}
+	}
+}
+
+func UpdateStatus(id int, status string) {
+	con, err := sql.Open("mymysql", "cimon_dev/cimon/changeme")
+	defer con.Close()
+
+	if err != nil {
+		panic(err)
+	}
+
+	if _, err := con.Exec("UPDATE jobs SET status=? WHERE id=?", status, id); err != nil {
+		panic(err)
+	} else {
+		fmt.Printf("Updated job %d to status '%s'", id, status)
 	}
 }
 
@@ -68,4 +83,22 @@ func getAllJobs() []*JenkinsJob {
 	}
 
 	return jobs
+}
+
+func GetByPath(path string) *JenkinsJob {
+	con, err := sql.Open("mymysql", "cimon_dev/cimon/changeme")
+	defer con.Close()
+
+	if err != nil {
+		panic(err)
+	}
+
+	job := new(JenkinsJob)
+
+	if err := con.QueryRow("SELECT * from jobs where path=?", path).
+			Scan(&job.Id, &job.Path, &job.Status); err != nil {
+		panic(err)
+	}
+
+	return job
 }

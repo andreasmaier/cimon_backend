@@ -3,23 +3,25 @@ package main
 import (
 	"net/http"
 	"fmt"
+	"encoding/json"
 	"io/ioutil"
 	"io"
-	"encoding/json"
+	"bytes"
 )
 
 type JobBuild struct {
 	Number int `json:"number"`
 	QueueId int `json:"queue_id"`
 	Phase string `json:"phase"`
+	Status string `json:"status"`
 	Url string `json:"url"`
 	Log string `json:"log"`
 }
 
 type JobUpdate struct {
-	Name int `json:"name"`
-	//Url string `json:"url"`
-	//Build JobBuild `json:"build"`
+	Name string `json:"name"`
+	Url string `json:"url"`
+	Build JobBuild `json:"build"`
 }
 
 func JobUpdates(w http.ResponseWriter, r *http.Request) {
@@ -31,13 +33,17 @@ func JobUpdates(w http.ResponseWriter, r *http.Request) {
 
 	fmt.Printf("%s\n", body)
 
-	//decoder := json.NewDecoder(r.Body)
-	//var update JobUpdate
-	//if err := decoder.Decode(&update); err != nil {
-	//	panic(err)
-	//}
-	//
-	//fmt.Println(update)
+	decoder := json.NewDecoder(bytes.NewReader(body))
+	var update JobUpdate
+	if err := decoder.Decode(&update); err != nil {
+		panic(err)
+	}
+
+	if update.Build.Phase == "COMPLETED" {
+		job := GetByPath(update.Url)
+
+		UpdateStatus(job.Id, update.Build.Status)
+	}
 
 	h.broadcast <- body
 }
