@@ -44,6 +44,30 @@ var routes = Routes{
 		"/wstest",
 		WSTest,
 	},
+	Route{
+		"Jobs",
+		"GET",
+		"/jobs",
+		Jobs,
+	},
+	Route{
+		"AddJobs",
+		"POST",
+		"/manage/jobs",
+		AddJob,
+	},
+	Route{
+		"AddJobs",
+		"OPTIONS",
+		"/manage/jobs",
+		AddJob,
+	},
+	Route{
+		"GetAllJobs",
+		"GET",
+		"/manage/jobs",
+		GetAllJob,
+	},
 }
 
 
