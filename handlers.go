@@ -7,6 +7,13 @@ import (
 	"io/ioutil"
 	"io"
 	"bytes"
+	"golang.org/x/net/context"
+	"google.golang.org/grpc/credentials"
+	"log"
+	"crypto/x509"
+	"google.golang.org/grpc"
+	pb "github.com/andreasmaier/cimon_jobs/jobs"
+	"github.com/philips/grpc-gateway-example/insecure"
 )
 
 type JobBuild struct {
@@ -24,6 +31,43 @@ type JobUpdate struct {
 	Build JobBuild `json:"build"`
 }
 
+const (
+	grpcPort = 10000
+)
+
+var (
+	demoCertPool *x509.CertPool
+	demoAddr     string
+)
+
+func init() {
+	demoCertPool = x509.NewCertPool()
+	ok := demoCertPool.AppendCertsFromPEM([]byte(insecure.Cert))
+	if !ok {
+		panic("bad certs")
+	}
+	demoAddr = fmt.Sprintf("localhost:%d", grpcPort)
+
+	var opts []grpc.DialOption
+	creds := credentials.NewClientTLSFromCert(demoCertPool, demoAddr)
+	opts = append(opts, grpc.WithTransportCredentials(creds))
+
+	conn, err := grpc.Dial(demoAddr, opts...)
+	if err != nil {
+		panic(err)
+	}
+	defer conn.Close()
+
+	client := pb.NewJobsApiClient(conn)
+
+	r, err := client.GetAllJobs(context.Background(), &pb.Empty{})
+
+	if err != nil {
+		panic(err)
+	}
+	log.Printf("Watched Jobs %d", len(r.Jobs))
+}
+
 func JobUpdates(w http.ResponseWriter, r *http.Request) {
 	body, err := ioutil.ReadAll(io.LimitReader(r.Body, 1048576))
 
@@ -39,11 +83,37 @@ func JobUpdates(w http.ResponseWriter, r *http.Request) {
 		panic(err)
 	}
 
-	//if update.Build.Phase == "COMPLETED" {
-	//	job := GetByPath(update.Url)
-	//
-	//	UpdateStatus(job.Id, update.Build.Status)
-	//}
+	if update.Build.Phase == "COMPLETED" {
+		updateRequest := pb.UpdateStatusRequest{
+			Path: update.Url,
+			Status: update.Build.Status,
+		}
+
+		demoCertPool = x509.NewCertPool()
+		ok := demoCertPool.AppendCertsFromPEM([]byte(insecure.Cert))
+		if !ok {
+			panic("bad certs")
+		}
+		demoAddr = fmt.Sprintf("localhost:%d", grpcPort)
+
+		var opts []grpc.DialOption
+		creds := credentials.NewClientTLSFromCert(demoCertPool, demoAddr)
+		opts = append(opts, grpc.WithTransportCredentials(creds))
+
+		conn, err := grpc.Dial(demoAddr, opts...)
+		if err != nil {
+			panic(err)
+		}
+		defer conn.Close()
+
+		client := pb.NewJobsApiClient(conn)
+
+		_, err = client.UpdateJobStatus(context.Background(), &updateRequest)
+
+		if err != nil {
+			fmt.Printf("Error updating job status: %s\n", err)
+		}
+	}
 
 	h.broadcast <- body
 }
